@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pos Pantau Cuaca — Gunung Tujuh Kerinci</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0c1310;
+    --surface: #141f19;
+    --surface-2: #1a2921;
+    --line: #2a3d30;
+    --text: #edf2ec;
+    --muted: #8aa295;
+    --normal: #4fae8f;
+    --waspada: #e8a33d;
+    --bahaya: #d9564a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    padding: 28px 18px 60px;
+  }
+  .display{ font-family:'Big Shoulders Display', sans-serif; }
+  .wrap{ max-width: 900px; margin:0 auto; }
+
+  header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:16px; flex-wrap:wrap; margin-bottom:22px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+  }
+  .title-block h1{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800; font-size: 30px; letter-spacing:0.3px; line-height:1.05;
+  }
+  .title-block .sub{ color: var(--muted); font-size:12px; margin-top:6px; }
+
+  .status-badge{
+    display:flex; align-items:center; gap:10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 16px 8px 10px;
+  }
+  .status-badge .pulse{
+    width:10px; height:10px; border-radius:50%;
+    background: var(--normal);
+    box-shadow: 0 0 0 0 var(--normal);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(79,174,143,0.55); }
+    70%{ box-shadow: 0 0 0 9px rgba(79,174,143,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(79,174,143,0); }
+  }
+  .status-badge .label{ font-size:12px; }
+  .status-badge .mode{ font-family:'Big Shoulders Display',sans-serif; font-weight:700; font-size:16px; }
+
+  .hero-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;
+  }
+  .hero-card{
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px;
+  }
+  .hero-card .label{ color: var(--muted); font-size:11px; display:flex; justify-content:space-between; }
+  .hero-card .value{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800; font-size: 56px; line-height:1;
+    margin-top:10px; display:flex; align-items:baseline; gap:6px;
+  }
+  .hero-card .value span{ font-size:18px; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-weight:400;}
+  .hero-card .range{ font-size:11px; color: var(--muted); margin-top:10px; }
+
+  .stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-bottom:14px; }
+  .stat{ background: var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .stat .label{ color:var(--muted); font-size:10px; }
+  .stat .value{ font-family:'Big Shoulders Display',sans-serif; font-weight:700; font-size:20px; margin-top:6px; }
+
+  .panel{
+    background: var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding: 18px; margin-bottom:14px;
+  }
+  .panel h2{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:700; font-size:15px;
+    color: var(--muted); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel h2 .interval{ font-size:10px; font-family:'IBM Plex Mono',monospace; color: var(--muted); border:1px solid var(--line); padding:3px 8px; border-radius:6px; }
+
+  svg.chart{ width:100%; height:150px; display:block; }
+  .legend{ display:flex; gap:16px; margin-top:10px; font-size:11px; color:var(--muted); }
+  .legend .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+
+  .note{
+    font-size:12px; color: var(--muted); line-height:1.6; border-left:2px solid var(--line);
+    padding-left:12px; margin-top: 6px;
+  }
+  .note b{ color: var(--text); }
+
+  footer{ text-align:center; color:var(--muted); font-size:11px; margin-top: 20px; }
+
+  @media (max-width:600px){
+    .hero-grid, .stats{ grid-template-columns: repeat(2,1fr); }
+    .hero-card .value{ font-size: 42px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1>POS PANTAU CUACA<br>GUNUNG TUJUH KERINCI</h1>
+      <div class="sub">Node: Anemometer + BME280 · via LoRa SX1278 → Basecamp</div>
+    </div>
+    <div class="status-badge">
+      <span class="pulse" id="pulseDot"></span>
+      <div>
+        <div class="label">Status Sistem</div>
+        <div class="mode" id="modeLabel">NORMAL</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero-grid">
+    <div class="hero-card">
+      <div class="label"><span>SUHU UDARA</span><span id="tempTrend">—</span></div>
+      <div class="value" id="tempValue">--<span>°C</span></div>
+      <div class="range">Ambang waspada: &lt;12°C atau &gt;30°C</div>
+    </div>
+    <div class="hero-card">
+      <div class="label"><span>KECEPATAN ANGIN</span><span id="windTrend">—</span></div>
+      <div class="value" id="windValue">--<span>km/j</span></div>
+      <div class="range">Ambang waspada: &gt;25 km/j</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">KELEMBAPAN</div><div class="value" id="humValue">--%</div></div>
+    <div class="stat"><div class="label">TEKANAN UDARA</div><div class="value" id="presValue">-- hPa</div></div>
+    <div class="stat"><div class="label">MODE KIRIM DATA</div><div class="value" id="intervalValue">1 jam</div></div>
+    <div class="stat"><div class="label">DATA MASUK KE-</div><div class="value" id="counterValue">0</div></div>
+  </div>
+
+  <div class="panel">
+    <h2><span>Riwayat Suhu &amp; Angin</span><span class="interval" id="intervalTag">interval normal</span></h2>
+    <svg class="chart" id="chartSvg" viewBox="0 0 600 150" preserveAspectRatio="none"></svg>
+    <div class="legend">
+      <span><span class="dot" style="background:#e8a33d"></span>Suhu (°C)</span>
+      <span><span class="dot" style="background:#4fae8f"></span>Angin (km/j)</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Catatan Sistem</h2>
+    <div class="note">
+      Data di atas adalah <b>simulasi</b> untuk keperluan demo/sidang. Alur aslinya: sensor Anemometer + BME280 di puncak → dikirim via <b>LoRa SX1278</b> ke node penerima di basecamp → disimpan ke <b>database</b> → ditampilkan di sini secara real-time. Saat kondisi ekstrem terdeteksi (angin kencang / suhu ekstrem), sistem otomatis pindah ke <b>Mode Darurat</b> (interval kirim 5 menit) sesuai rancangan flowchart.
+    </div>
+  </div>
+
+  <footer>Prototipe dashboard — Rancang Bangun Sistem Pemantauan Cuaca, Teknik Elektro, Universitas Jambi</footer>
+</div>
+
+<script>
+const els = {
+  temp: document.getElementById('tempValue'),
+  wind: document.getElementById('windValue'),
+  hum: document.getElementById('humValue'),
+  pres: document.getElementById('presValue'),
+  tempTrend: document.getElementById('tempTrend'),
+  windTrend: document.getElementById('windTrend'),
+  mode: document.getElementById('modeLabel'),
+  pulse: document.getElementById('pulseDot'),
+  interval: document.getElementById('intervalValue'),
+  intervalTag: document.getElementById('intervalTag'),
+  counter: document.getElementById('counterValue'),
+  chart: document.getElementById('chartSvg'),
+};
+
+const STATUS_COLORS = { normal: '#4fae8f', waspada: '#e8a33d', bahaya: '#d9564a' };
+
+let temp = 18, wind = 8, hum = 75, pres = 1006;
+let history = []; // {temp, wind}
+let count = 0;
+const MAX_POINTS = 30;
+
+function randomWalk(val, delta, min, max){
+  let next = val + (Math.random() - 0.5) * delta;
+  return Math.max(min, Math.min(max, next));
+}
+
+function classify(temp, wind){
+  if (wind > 35 || temp < 8 || temp > 33) return 'bahaya';
+  if (wind > 25 || temp < 12 || temp > 30) return 'waspada';
+  return 'normal';
+}
+
+function trendArrow(curr, prev){
+  if (prev === undefined) return '—';
+  if (curr > prev + 0.15) return '▲';
+  if (curr < prev - 0.15) return '▼';
+  return '▬';
+}
+
+function drawChart(){
+  const w = 600, h = 150, pad = 8;
+  const n = history.length;
+  if(n < 2){ els.chart.innerHTML = ''; return; }
+
+  const temps = history.map(p => p.temp);
+  const winds = history.map(p => p.wind);
+  const tMin = Math.min(...temps) - 2, tMax = Math.max(...temps) + 2;
+  const wMin = Math.min(...winds) - 2, wMax = Math.max(...winds) + 2;
+
+  const x = i => pad + (i / (MAX_POINTS - 1)) * (w - pad*2);
+  const yT = v => h - pad - ((v - tMin) / (tMax - tMin || 1)) * (h - pad*2);
+  const yW = v => h - pad - ((v - wMin) / (wMax - wMin || 1)) * (h - pad*2);
+
+  const startIdx = MAX_POINTS - n;
+  const tempPts = history.map((p,i) => `${x(startIdx+i)},${yT(p.temp)}`).join(' ');
+  const windPts = history.map((p,i) => `${x(startIdx+i)},${yW(p.wind)}`).join(' ');
+
+  els.chart.innerHTML = `
+    <polyline points="${tempPts}" fill="none" stroke="#e8a33d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${windPts}" fill="none" stroke="#4fae8f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  `;
+}
+
+function tick(){
+  const prevTemp = temp, prevWind = wind;
+  temp = randomWalk(temp, 1.2, 4, 34);
+  wind = randomWalk(wind, 3.5, 0, 42);
+  hum = randomWalk(hum, 2, 55, 95);
+  pres = randomWalk(pres, 0.6, 995, 1015);
+  count++;
+
+  history.push({ temp, wind });
+  if(history.length > MAX_POINTS) history.shift();
+
+  const status = classify(temp, wind);
+  const isEmergency = status !== 'normal';
+
+  els.temp.innerHTML = `${temp.toFixed(1)}<span>°C</span>`;
+  els.wind.innerHTML = `${wind.toFixed(1)}<span>km/j</span>`;
+  els.hum.textContent = `${hum.toFixed(0)}%`;
+  els.pres.textContent = `${pres.toFixed(0)} hPa`;
+  els.tempTrend.textContent = trendArrow(temp, prevTemp);
+  els.windTrend.textContent = trendArrow(wind, prevWind);
+  els.counter.textContent = count;
+
+  els.mode.textContent = status.toUpperCase();
+  els.mode.style.color = STATUS_COLORS[status];
+  els.pulse.style.background = STATUS_COLORS[status];
+
+  if(isEmergency){
+    els.interval.textContent = '5 menit';
+    els.intervalTag.textContent = 'mode darurat';
+    els.intervalTag.style.borderColor = STATUS_COLORS[status];
+    els.intervalTag.style.color = STATUS_COLORS[status];
+  } else {
+    els.interval.textContent = '1 jam';
+    els.intervalTag.textContent = 'interval normal';
+    els.intervalTag.style.borderColor = 'var(--line)';
+    els.intervalTag.style.color = 'var(--muted)';
+  }
+
+  drawChart();
+}
+
+// isi awal biar grafik langsung ada bentuknya
+for(let i=0;i<12;i++) tick();
+setInterval(tick, 2500);
+</script>
+</body>
+</html>
